@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Add FliggiBucks per NM Column
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.2
 // @description  Add column that divides FliggiBucks by Distance on FSHub
 // @author       DeviousFusion
 // @match        https://fshub.io/*
@@ -14,10 +14,13 @@
     // Fetch the assignments table
     const table = document.getElementById('assignments-table');
     
-    if (!table) return; // Exit if table not found
+    if (!table) {
+        console.log("Assignments table not found!");
+        return; // Exit if table not found
+    }
 
     // Function to create the header for the new column
-    function createColumnHeader() {
+    function addColumnHeader() {
         const headerRow = table.querySelector('thead tr');
         const newHeader = document.createElement('th');
         newHeader.textContent = 'F$/NM';
@@ -25,13 +28,16 @@
     }
 
     // Function to create the value cell for the new column
-    function createColumnValues() {
+    function addColumnValues() {
         const rows = table.querySelectorAll('tbody tr');
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length > 0) {
                 const fliggiBucksText = cells[1].innerText.replace('F$', '').trim();
-                const distanceText = cells[3].innerText.replace('NM', '').trim();
+                const distanceText = cells[3].innerText.match(/(\d+)/)[0];
+
+                console.log(`Parsing row: FliggiBucks = ${fliggiBucksText}, Distance = ${distanceText}`);
+
                 const fliggiBucks = parseFloat(fliggiBucksText);
                 const distance = parseFloat(distanceText);
 
@@ -43,11 +49,13 @@
                     newCell.textContent = 'N/A';
                 }
                 row.appendChild(newCell);
+            } else {
+                console.log("No cells found in row!");
             }
         });
     }
 
     // Add the header and values
-    createColumnHeader();
-    createColumnValues();
+    addColumnHeader();
+    addColumnValues();
 })();
