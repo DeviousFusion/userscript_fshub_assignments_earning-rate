@@ -55,7 +55,24 @@
         });
     }
 
-    // Add the header and values
-    addColumnHeader();
-    addColumnValues();
+    // Function to add both header and values
+    function addColumn() {
+        addColumnHeader();
+        addColumnValues();
+    }
+
+    // Create a MutationObserver to observe changes in the DOM
+    const observer = new MutationObserver((mutationsList) => {
+        for (let mutation of mutationsList) {
+            if (mutation.type === 'childList') {
+                addColumn();
+            }
+        }
+    });
+
+    // Start observing the entire document
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Try to add the column initially in case the table is already there
+    addColumn();
 })();
