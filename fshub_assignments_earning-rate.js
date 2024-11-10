@@ -1,16 +1,18 @@
 // ==UserScript==
-// @name         Add FliggiBucks per NM Column
+// @name         FSHub QoL Script
 // @namespace    http://tampermonkey.net/
-// @version      1.4
-// @description  Add column that divides FliggiBucks by Distance on FSHub
+// @version      1.6
+// @description  Add custom data to FSHub
 // @author       DeviousFusion
-// @match        https://fshub.io/*
+// @match        https://fshub.io/vaap/*/assignments
+// @match        https://fshub.io/vaap/*/duty
 // @grant        none
 // ==/UserScript==
 
 (function() {
     'use strict';
 
+    // #### Assignments Table ####
     // Function to add the column header
     function addColumnHeader() {
         const table = document.getElementById('assignments-table');
@@ -74,6 +76,57 @@
         addColumnValues();
     }
 
+    // #### Duty Schedule ####
+    // Helper function to parse values and bonuses from the text contents
+    function parseValueAndBonus(text) {
+        const valueMatch = text.match(/F\$ (\d+)/);
+        const bonusMatch = text.match(/\+(\d+)/);
+        const value = valueMatch ? parseInt(valueMatch[1], 10) : 0;
+        const bonus = bonusMatch ? parseInt(bonusMatch[1], 10) : 0;
+        return {
+            value,
+            bonus,
+            total: value + bonus
+        };
+    }
+
+    // Helper function to parse miles from separated element
+    function parseMiles(text) {
+        const milesMatch = text.match(/(\d+)\s*nm/);
+        return milesMatch ? parseInt(milesMatch[1], 10) : 0;
+    }
+
+    // Function to retrieve and sum up values and bonuses
+    function calculateAndDisplayTotals() {
+        let totalSum = 0;
+        let totalMiles = 0;
+
+        const rows = document.querySelectorAll('.row.progress-stats');
+        rows.forEach(row => {
+            const valueElement = row.querySelector('span[id="fp-ete"]');
+            const milesElement = row.querySelector('span[id="fp-dnm"]');
+
+            const { value, bonus, total } = parseValueAndBonus(valueElement.textContent);
+            const miles = parseMiles(milesElement.textContent);
+
+            valueElement.textContent += `= F$ ${total}`;
+
+            // Sum up for the grand total and total miles
+            totalSum += total;
+            totalMiles += miles;
+        });
+
+        // Display the grand total and total miles after "My duty schedule"
+        const dutyScheduleTitle = document.querySelector('.panel-title');
+        if (dutyScheduleTitle) {
+            const grandTotalDisplay = document.createElement('span');
+            grandTotalDisplay.textContent = `Total schedule value: F$ ${totalSum}, Total miles: ${totalMiles} nm`;
+            grandTotalDisplay.style.cssText = 'float: right;';
+            dutyScheduleTitle.appendChild(grandTotalDisplay);
+        }
+    }
+
+    // #### Observer setup ####
     // Create a MutationObserver to observe changes in the DOM that indicate table rows being added or changed
     const observer = new MutationObserver((mutationsList) => {
         for (let mutation of mutationsList) {
@@ -85,11 +138,15 @@
 
     // Initialize observer to start observing the assignments table for changes
     window.addEventListener('load', function() {
-        const targetNode = document.getElementById('assignments-table');
-        if (targetNode) {
-            observer.observe(targetNode.querySelector('tbody'), { childList: true, subtree: true });
+        const targetNodeAssignments = document.getElementById('assignments-table');
+        const targetNodeDutySchedule = document.getElementById('schedule-generator');
+        if (targetNodeAssignments) {
+            observer.observe(targetNodeAssignments.querySelector('tbody'), { childList: true, subtree: true });
             // Initial call to add the column
             addColumn();
+        }
+        else if (targetNodeDutySchedule) {
+            calculateAndDisplayTotals();
         }
     });
 })();
